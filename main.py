@@ -2,10 +2,13 @@ from tkinter import *
 from tkinter import messagebox
 import random
 import pyperclip
+import json
 
 
 # ---------------------------- PASSWORD GENERATOR ------------------------------- #
 def generate_pass():
+    if pass_entry.get() != "":
+        pass_entry.delete(0, END)
     letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u',
                'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
                'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
@@ -29,11 +32,51 @@ def save():
                                                                           f"Email:{email_entry.get()}\n "
                                                                           f"Password:{pass_entry.get()} "
                                                                           f"Is it ok to save?")
+        new_data = {
+            web_entry.get().title(): {
+                "email": email_entry.get(),
+                "password": pass_entry.get(),
+            }
+        }
         if want_to_save:
-            with open("password_manager.txt", mode="a") as file:
-                file.write(f"{web_entry.get()} | {email_entry.get()} | {pass_entry.get()}\n")
+            try:
+                with open("password_manager.json", mode="r") as file:
+                    # load data
+                    data = json.load(file)
+                    # update data
+                    data.update(new_data)
+            except FileNotFoundError:
+                with open("password_manager.json", mode="w") as file:
+                    json.dump(new_data, file)
+                    file.close()
+            else:
+                with open("password_manager.json", mode="w") as file:
+                    json.dump(data, file, indent=4)
+                    file.close()
+            finally:
                 web_entry.delete(0, END)
                 pass_entry.delete(0, END)
+
+
+# ---------------------------- Find PASSWORD -------------------------------#
+def find_pass():
+    if len(web_entry.get()) == 0:
+        messagebox.showwarning(title="Opps", message="Please don't leave website field field empty.")
+    else:
+        try:
+            with open("password_manager.json", mode="r") as file:
+                # load data
+                data = json.load(file)
+                email = data[web_entry.get().title()]["email"]
+                password = data[web_entry.get().title()]["password"]
+        except FileNotFoundError:
+            messagebox.showwarning(title="Error", message="No data file found")
+        except KeyError as key:
+            messagebox.showwarning(title="Error", message=f"No Records of {key} account was found")
+        else:
+            messagebox.showinfo(title=web_entry.get().title(), message=f"Email: {email}\nPassword: {password}")
+        finally:
+            web_entry.delete(0, END)
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -55,18 +98,20 @@ pass_label = Label(text="Password:")
 pass_label.grid(row=3, column=0)
 
 # Entries
-web_entry = Entry(width=39)
-web_entry.grid(row=1, column=1, columnspan=2)
+web_entry = Entry(width=33)
+web_entry.grid(row=1, column=1)
 web_entry.focus()
-email_entry = Entry(width=39)
+email_entry = Entry(width=52)
 email_entry.grid(row=2, column=1, columnspan=2)
 email_entry.insert(0, "example@gmail.com")
-pass_entry = Entry(width=21)
+pass_entry = Entry(width=33)
 pass_entry.grid(row=3, column=1)
 
 # buttons
 pass_button = Button(text="Generate Password", command=generate_pass)
 pass_button.grid(row=3, column=2)
-add_button = Button(text="Add", width=36, command=save)
+search_button = Button(text="Search", width=15, command=find_pass)
+search_button.grid(row=1, column=2)
+add_button = Button(text="Add", width=45, command=save)
 add_button.grid(row=4, column=1, columnspan=2)
 window.mainloop()
